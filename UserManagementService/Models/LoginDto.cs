@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Pharma.Dtos
+namespace UserManagementService.Models
 {
     public class LoginDto
     {

@@ -12,12 +12,15 @@ using Pharma.Services.Interfaces;
 using System.Text;
 using UserManagementService.Models;
 using UserManagementService.Services;
+using UserManagementService.Services.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // setting connection string for Entity Framework
 builder.Services.AddDbContext<PharmaDbContext>(options => 
 options.UseSqlServer(builder.Configuration.GetConnectionString("dbConnection")));
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(10));
 
 // for Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()

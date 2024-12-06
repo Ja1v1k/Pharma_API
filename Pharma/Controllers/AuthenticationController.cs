@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Pharma.Dtos;
@@ -7,7 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using UserManagementService.Models;
-using UserManagementService.Services;
+using UserManagementService.Services.Interface;
 
 namespace Pharma.Controllers
 {
@@ -176,6 +177,59 @@ namespace Pharma.Controllers
 
 
             return Unauthorized();
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user != null)
+            {
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var forgotPasswordLink = Url.Action(nameof(ResetPassword), "Authentication", new { token, email = user.Email }, Request.Scheme);
+                var message = new Message(new string[] { user.Email }, "Forgot Password Link!", forgotPasswordLink!);
+
+                _emailService.SendEmail(message);
+
+                return StatusCode(StatusCodes.Status201Created, new Response { Status = "Success", Message = $"Password Change request is sent to your {user.Email} Successfully!" });
+            }
+            return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Message = "Couldn't send link to email, please try again." });
+
+        }
+
+        [HttpGet("reset-password")]
+        public async Task<IActionResult> ResetPassword(string token, string email)
+        {
+            var model = new ResetPasswordDto { Token = token, Email = email };
+            return Ok(new
+            {
+                model
+            });
+        }
+
+        [HttpPost]
+        [Route("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
+        {
+            var user = await _userManager.FindByEmailAsync(resetPasswordDto.Email);
+            if (user != null)
+            {
+                var resetPassResult = await _userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
+                if (!resetPassResult.Succeeded)
+                {
+                    foreach(var error in resetPassResult.Errors)
+                    {
+                        ModelState.AddModelError(error.Code, error.Description);
+                    }
+                    return Ok(ModelState);
+                }
+
+                return StatusCode(StatusCodes.Status201Created, new Response { Status = "Success", Message = $"Password has been changed!" });
+            }
+            return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Message = "Couldn't change the password!" });
+
         }
 
         private JwtSecurityToken GetToken(List<Claim> authClaim)

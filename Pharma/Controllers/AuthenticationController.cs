@@ -22,57 +22,31 @@ namespace Pharma.Controllers
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
 
-        public AuthenticationController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService)
+        private readonly IUserService _userService;
+
+        public AuthenticationController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration, IEmailService emailService, IUserService userService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
             _configuration = configuration;
             _emailService = emailService;
+            _userService = userService;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register([FromBody] RegisterDto registerUser, string role)
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerUser)
         {
-            //check user exists
-            var userExists = await _userManager.FindByEmailAsync(registerUser.Email);
-            if (userExists != null)
-            {
-                return StatusCode(StatusCodes.Status400BadRequest, new Response { Status = "Error", Message = "User already exists!" });
-            }
-
-            //Add user to DB
-            IdentityUser user = new()
-            {
-                Email = registerUser.Email,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = registerUser.UserName,
-                TwoFactorEnabled = true
-            };
-
-            if (await _roleManager.RoleExistsAsync(role))
-            {
-                var result = await _userManager.CreateAsync(user, registerUser.Password);
-                if (!result.Succeeded)
-                {
-                    return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "Failed to Create User!" });
-                }
-                await _userManager.AddToRoleAsync(user, role);
-
                 //Add token ot verify email...
-                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { token, email = user.Email }, Request.Scheme);
-                var message = new Message(new string[] { user.Email }, "Confirmation Email Link!", confirmationLink!);
+                var token = await _userService.CreateUserWithTokenAsync(registerUser);
+                var confirmationLink = Url.Action(nameof(ConfirmEmail), "Authentication", new { token, email = registerUser.Email }, Request.Scheme);
+                var message = new Message(new string[] { registerUser.Email }, "Confirmation Email Link!", confirmationLink!);
 
                 _emailService.SendEmail(message);
 
-                return StatusCode(StatusCodes.Status201Created, new Response { Status = "Success", Message = $"User Created & Email sent to {user.Email} Successfully!" });
-            }
-            else
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "Role doesn't exist!" });
+                return StatusCode(StatusCodes.Status201Created, new Response { Status = "Success", Message = $"User Created & Email sent to {registerUser.Email} Successfully!" });
+                //return StatusCode(StatusCodes.Status500InternalServerError, new Response { Status = "Error", Message = "Role doesn't exist!" });
 
-            }
 
         }
 

@@ -2,14 +2,12 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Pharma.Data;
 using Pharma.Repository;
 using Pharma.Repository.Interfaces;
 using Pharma.Services;
 using Pharma.Services.Interfaces;
-using System.Text;
 using UserManagementService.Models;
 using UserManagementService.Services;
 using UserManagementService.Services.Interface;
@@ -48,6 +46,7 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddScoped<IPatientRepository, PatientRepository>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 
 builder.Services.AddControllers();
